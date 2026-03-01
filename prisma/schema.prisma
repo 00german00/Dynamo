@@ -1,0 +1,94 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  users     User[]
+  assets    Asset[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Asset {
+  id          String   @id @default(cuid())
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  type        String   // "tombstone" | "document"
+  // tombstone fields
+  dealName    String?
+  acquirer    String?
+  target      String?
+  dealValue   String?  // e.g. "$2.4B"
+  year        Int?
+  description String?
+  logoUrl     String?
+  tags        Json?    // string[]
+  // document fields
+  fileName    String?
+  fileType    String?
+  url         String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String?
+  companyId   String?
+  company     Company? @relation(fields: [companyId], references: [id])
+  portals     Portal[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Portal {
+  id          String   @id @default(cuid())
+  slug        String   @unique // The URL slug for sharing
+  title       String
+  description String?
+  companyName String?  // Target company name
+  personas    Json?    // string[] e.g. ["CTO", "General Counsel"]
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  blocks      Block[]
+  events      Event[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Block {
+  id          String   @id @default(cuid())
+  type        String   // "hook"|"proof"|"roi"|"timeline"|"drive"|"tombstone_carousel"
+  content     Json     // Flexible JSON payload containing the text/config for the block
+  order       Int      // Display order 1-10
+  personas    Json?    // string[] — subset of Portal.personas; empty = visible to all
+  portalId    String
+  portal      Portal   @relation(fields: [portalId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Event {
+  id          String   @id @default(cuid())
+  portalId    String
+  portal      Portal   @relation(fields: [portalId], references: [id], onDelete: Cascade)
+  type        String   // "view", "time_on_block", "click"
+  blockId     String?  // Optional reference to a specific block ID
+  ipAddress   String?  // For deduplicating tracking / detecting sharing
+  metadata    Json?    // Additional contextual data e.g. {"durationSeconds": 45}
+  createdAt   DateTime @default(now())
+}
