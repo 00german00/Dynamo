@@ -6,6 +6,7 @@ interface TrackedBlockProps {
   portalId: string;
   blockId: string;
   blockType: string;
+  viewerEmail: string | null;
   children: React.ReactNode;
 }
 
@@ -14,7 +15,7 @@ interface TrackedBlockProps {
  * 1. When the block enters the viewport ("view" event)
  * 2. How long the user dwells on the block ("time_on_block" event on exit)
  */
-export function TrackedBlock({ portalId, blockId, blockType, children }: TrackedBlockProps) {
+export function TrackedBlock({ portalId, blockId, blockType, viewerEmail, children }: TrackedBlockProps) {
   const ref = useRef<HTMLDivElement>(null);
   const entryTime = useRef<number | null>(null);
   const hasLoggedView = useRef(false);
@@ -24,10 +25,10 @@ export function TrackedBlock({ portalId, blockId, blockType, children }: Tracked
       fetch("/api/track", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ portalId, type, blockId, metadata }),
+        body: JSON.stringify({ portalId, type, blockId, viewerEmail, metadata }),
       }).catch(() => {}); // fire-and-forget
     },
-    [portalId, blockId]
+    [portalId, blockId, viewerEmail]
   );
 
   useEffect(() => {

@@ -56,18 +56,20 @@ model User {
 }
 
 model Portal {
-  id          String   @id @default(cuid())
-  slug        String   @unique // The URL slug for sharing
-  title       String
-  description String?
-  companyName String?  // Target company name
-  personas    Json?    // string[] e.g. ["CTO", "General Counsel"]
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  blocks      Block[]
-  events      Event[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String   @id @default(cuid())
+  slug          String   @unique // The URL slug for sharing
+  title         String
+  description   String?
+  companyName   String?  // Target company name
+  personas      Json?    // string[] e.g. ["CTO", "General Counsel"]
+  accessMode    String   @default("open") // "open" | "restricted"
+  allowedEmails Json?    // string[] — only used when accessMode = "restricted"
+  userId        String
+  user          User     @relation(fields: [userId], references: [id])
+  blocks        Block[]
+  events        Event[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Block {
@@ -89,6 +91,7 @@ model Event {
   type        String   // "view", "time_on_block", "click"
   blockId     String?  // Optional reference to a specific block ID
   ipAddress   String?  // For deduplicating tracking / detecting sharing
+  viewerEmail String?  // Email of identified visitor (set when portal has email gate)
   metadata    Json?    // Additional contextual data e.g. {"durationSeconds": 45}
   createdAt   DateTime @default(now())
 }

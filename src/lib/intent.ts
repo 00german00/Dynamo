@@ -8,7 +8,10 @@
 interface EventRow {
   type: string;
   blockId: string | null;
+  ipAddress?: string | null;
+  viewerEmail?: string | null;
   metadata: unknown;
+  createdAt?: Date;
 }
 
 // Block types ranked by "buying intent" signal strength
@@ -76,10 +79,15 @@ export function deriveInsights(events: EventRow[]): string[] {
     insights.push(`🔁 Portal has been opened ${pageViews} times — high revisit rate.`);
   }
 
-  // Check unique IPs for link sharing detection
-  const uniqueIps = new Set(events.filter(e => e.type === "page_view").map(() => "unknown")); // simplified for MVP
-  if (uniqueIps.size > 1) {
-    insights.push("🌐 Link appears to have been shared with additional stakeholders.");
+  // Detect sharing via unique IPs or emails
+  const pageViewEvents = events.filter(e => e.type === "page_view");
+  const uniqueEmails = new Set(pageViewEvents.map(e => e.viewerEmail).filter(Boolean));
+  const uniqueIps = new Set(pageViewEvents.map(e => e.ipAddress).filter(ip => ip && ip !== "unknown"));
+
+  if (uniqueEmails.size > 1) {
+    insights.push(`🌐 ${uniqueEmails.size} different people have opened this portal.`);
+  } else if (uniqueEmails.size === 0 && uniqueIps.size > 1) {
+    insights.push(`🌐 Link appears to have been shared — ${uniqueIps.size} different IPs detected.`);
   }
 
   if (insights.length === 0) {
@@ -87,4 +95,54 @@ export function deriveInsights(events: EventRow[]): string[] {
   }
 
   return insights;
+}
+
+export interface VisitorRow {
+  key: string;         // email if known, else IP
+  isEmail: boolean;
+  intentScore: number;
+  totalDwellSeconds: number;
+  visitCount: number;
+  lastSeen: Date | null;
+}
+
+/**
+ * Groups events by viewer identity (email > IP > "unknown") and returns
+ * per-visitor stats for the signals dashboard.
+ */
+export function getVisitorBreakdown(events: EventRow[]): VisitorRow[] {
+  const map = new Map<string, EventRow[]>();
+
+  for (const ev of events) {
+    const key = ev.viewerEmail
+      ? ev.viewerEmail.toLowerCase()
+      : (ev.ipAddress && ev.ipAddress !== "unknown" ? ev.ipAddress : "unknown");
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(ev);
+  }
+
+  const rows: VisitorRow[] = [];
+
+  for (const [key, visitorEvents] of map.entries()) {
+    const visitCount = visitorEvents.filter(e => e.type === "page_view").length;
+    const totalDwellSeconds = visitorEvents
+      .filter(e => e.type === "time_on_block")
+      .reduce((sum, e) => sum + ((e.metadata as { durationSeconds?: number })?.durationSeconds || 0), 0);
+    const lastSeen = visitorEvents.reduce((latest, e) => {
+      if (!e.createdAt) return latest;
+      return !latest || e.createdAt > latest ? e.createdAt : latest;
+    }, null as Date | null);
+
+    rows.push({
+      key,
+      isEmail: !!(visitorEvents[0]?.viewerEmail),
+      intentScore: calculateIntentScore(visitorEvents),
+      totalDwellSeconds,
+      visitCount,
+      lastSeen,
+    });
+  }
+
+  // Sort by intent score descending
+  return rows.sort((a, b) => b.intentScore - a.intentScore);
 }

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   ExternalLink, BarChart3, ChevronUp, ChevronDown,
-  Trash2, Plus, X, Save, Pencil
+  Trash2, Plus, X, Save, Pencil, Globe, Lock
 } from 'lucide-react';
 
 interface BlockData {
@@ -25,6 +25,8 @@ interface PortalData {
   title: string;
   companyName: string;
   personas: string[];
+  accessMode: string;
+  allowedEmails: string[];
   blocks: BlockData[];
 }
 
@@ -268,6 +270,9 @@ export function PortalEditor({ portal }: { portal: PortalData }) {
   const [title, setTitle] = useState(portal.title);
   const [personas, setPersonas] = useState<string[]>(portal.personas);
   const [newPersona, setNewPersona] = useState('');
+  const [accessMode, setAccessMode] = useState(portal.accessMode);
+  const [allowedEmails, setAllowedEmails] = useState<string[]>(portal.allowedEmails);
+  const [newEmail, setNewEmail] = useState('');
   const [blocks, setBlocks] = useState<BlockData[]>(portal.blocks);
   const [savingBlock, setSavingBlock] = useState<string | null>(null);
 
@@ -298,6 +303,35 @@ export function PortalEditor({ portal }: { portal: PortalData }) {
   };
 
   const removePersona = (name: string) => savePersonas(personas.filter((p) => p !== name));
+
+  // ── Access control ──
+  const saveAccessSettings = async (mode: string, emails: string[]) => {
+    await fetch(`/api/portals/${portal.slug}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessMode: mode, allowedEmails: emails }),
+    });
+  };
+
+  const setMode = (mode: string) => {
+    setAccessMode(mode);
+    saveAccessSettings(mode, allowedEmails);
+  };
+
+  const addEmail = () => {
+    const trimmed = newEmail.trim().toLowerCase();
+    if (!trimmed || allowedEmails.includes(trimmed)) return;
+    const updated = [...allowedEmails, trimmed];
+    setAllowedEmails(updated);
+    setNewEmail('');
+    saveAccessSettings(accessMode, updated);
+  };
+
+  const removeEmail = (email: string) => {
+    const updated = allowedEmails.filter((e) => e !== email);
+    setAllowedEmails(updated);
+    saveAccessSettings(accessMode, updated);
+  };
 
   // ── Block content edit ──
   const updateBlockContent = (id: string, content: Record<string, unknown>) => {
@@ -406,6 +440,78 @@ export function PortalEditor({ portal }: { portal: PortalData }) {
             <Plus className="w-3.5 h-3.5" /> Add
           </Button>
         </div>
+      </Card>
+
+      {/* Sharing / Access Control */}
+      <Card className="bg-neutral-900 border-neutral-800 p-6 space-y-5">
+        <div>
+          <h2 className="font-semibold text-white">Sharing</h2>
+          <p className="text-neutral-500 text-sm mt-0.5">Control who can view this portal.</p>
+        </div>
+
+        {/* Mode toggle */}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => setMode('open')}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-colors ${
+              accessMode === 'open'
+                ? 'bg-indigo-500/10 border-indigo-500/40 text-indigo-300'
+                : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-600'
+            }`}
+          >
+            <Globe className="w-4 h-4 shrink-0" />
+            <div>
+              <div className="text-sm font-medium">Anyone with the link</div>
+              <div className="text-xs opacity-60 mt-0.5">No access control</div>
+            </div>
+          </button>
+          <button
+            onClick={() => setMode('restricted')}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-colors ${
+              accessMode === 'restricted'
+                ? 'bg-indigo-500/10 border-indigo-500/40 text-indigo-300'
+                : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-600'
+            }`}
+          >
+            <Lock className="w-4 h-4 shrink-0" />
+            <div>
+              <div className="text-sm font-medium">Restricted</div>
+              <div className="text-xs opacity-60 mt-0.5">Email allowlist only</div>
+            </div>
+          </button>
+        </div>
+
+        {/* Allowlist — only shown in restricted mode */}
+        {accessMode === 'restricted' && (
+          <div className="space-y-3 pt-1">
+            <div className="flex flex-wrap gap-2">
+              {allowedEmails.map((email) => (
+                <span key={email} className="flex items-center gap-1.5 text-sm bg-neutral-800 border border-neutral-700 text-neutral-300 rounded-full px-3 py-1">
+                  {email}
+                  <button onClick={() => removeEmail(email)} className="hover:text-white transition-colors">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+              {allowedEmails.length === 0 && (
+                <span className="text-neutral-600 text-sm">No emails added yet — no one can access the portal.</span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addEmail()}
+                placeholder="jane@prospect.com"
+                className="bg-neutral-800 border-neutral-700 text-white max-w-xs"
+              />
+              <Button onClick={addEmail} size="sm" className="bg-indigo-500 hover:bg-indigo-600 text-white border-0 gap-1">
+                <Plus className="w-3.5 h-3.5" /> Add
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Block list */}

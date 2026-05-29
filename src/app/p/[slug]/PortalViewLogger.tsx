@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-export function PortalViewLogger({ portalId }: { portalId: string }) {
+export function PortalViewLogger({ portalId, viewerEmail }: { portalId: string; viewerEmail: string | null }) {
   const hasSent = useRef(false);
 
   useEffect(() => {
@@ -12,9 +12,9 @@ export function PortalViewLogger({ portalId }: { portalId: string }) {
     fetch("/api/track", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ portalId, type: "page_view" }),
+      body: JSON.stringify({ portalId, type: "page_view", viewerEmail }),
     }).catch(() => {});
-  }, [portalId]);
+  }, [portalId, viewerEmail]);
 
   return null;
 }

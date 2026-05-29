@@ -1,9 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { calculateIntentScore, deriveInsights } from "@/lib/intent";
+import { calculateIntentScore, deriveInsights, getVisitorBreakdown } from "@/lib/intent";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Eye, Clock, Zap, FileText } from "lucide-react";
+import { ArrowLeft, Eye, Clock, Zap, FileText, Users, Mail, Globe } from "lucide-react";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +23,7 @@ export default async function SignalsPage({ params }: { params: Promise<{ slug: 
 
   const intentScore = calculateIntentScore(portal.events);
   const insights = deriveInsights(portal.events);
+  const visitors = getVisitorBreakdown(portal.events);
 
   // Aggregate stats
   const pageViews = portal.events.filter((e) => e.type === "page_view").length;
@@ -120,6 +121,68 @@ export default async function SignalsPage({ params }: { params: Promise<{ slug: 
               {insight}
             </div>
           ))}
+        </CardContent>
+      </Card>
+
+      {/* Visitor Breakdown */}
+      <Card className="bg-neutral-900 border-neutral-800">
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Users className="w-5 h-5 text-indigo-400" /> Visitors
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {visitors.length === 0 ? (
+            <p className="text-neutral-500 text-sm">No visitors yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-neutral-500 uppercase tracking-wider border-b border-neutral-800">
+                    <th className="pb-3 pr-4 font-medium">Visitor</th>
+                    <th className="pb-3 pr-4 font-medium text-center">Score</th>
+                    <th className="pb-3 pr-4 font-medium text-center">Dwell</th>
+                    <th className="pb-3 pr-4 font-medium text-center">Visits</th>
+                    <th className="pb-3 font-medium">Last Seen</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-800/60">
+                  {visitors.map((v) => {
+                    const scoreColor =
+                      v.intentScore >= 70 ? "text-emerald-400" :
+                      v.intentScore >= 40 ? "text-amber-400" : "text-neutral-400";
+                    const dwell = v.totalDwellSeconds >= 60
+                      ? `${Math.floor(v.totalDwellSeconds / 60)}m${v.totalDwellSeconds % 60}s`
+                      : `${v.totalDwellSeconds}s`;
+                    return (
+                      <tr key={v.key} className="group">
+                        <td className="py-3 pr-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-neutral-800 flex items-center justify-center shrink-0">
+                              {v.isEmail
+                                ? <Mail className="w-3 h-3 text-indigo-400" />
+                                : <Globe className="w-3 h-3 text-neutral-500" />}
+                            </div>
+                            <span className={`font-medium ${v.isEmail ? "text-neutral-200" : "text-neutral-500 font-mono text-xs"}`}>
+                              {v.key}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 pr-4 text-center">
+                          <span className={`font-bold tabular-nums ${scoreColor}`}>{v.intentScore}</span>
+                        </td>
+                        <td className="py-3 pr-4 text-center text-neutral-400 tabular-nums">{dwell}</td>
+                        <td className="py-3 pr-4 text-center text-neutral-400 tabular-nums">{v.visitCount}</td>
+                        <td className="py-3 text-neutral-500 text-xs">
+                          {v.lastSeen ? new Date(v.lastSeen).toLocaleString() : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
 

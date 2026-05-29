@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
-    const { portalId, type, blockId, metadata } = await req.json();
+    const { portalId, type, blockId, viewerEmail, metadata } = await req.json();
 
     if (!portalId || !type) {
       return NextResponse.json({ error: 'portalId and type are required' }, { status: 400 });
@@ -21,6 +21,7 @@ export async function POST(req: Request) {
         type,
         blockId: blockId || null,
         ipAddress,
+        viewerEmail: viewerEmail || null,
         metadata: metadata || null,
       },
     });

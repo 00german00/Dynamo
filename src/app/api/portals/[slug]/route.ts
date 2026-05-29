@@ -16,6 +16,8 @@ export async function PATCH(
     data: {
       ...(body.title !== undefined ? { title: body.title } : {}),
       ...(body.personas !== undefined ? { personas: body.personas } : {}),
+      ...(body.accessMode !== undefined ? { accessMode: body.accessMode } : {}),
+      ...(body.allowedEmails !== undefined ? { allowedEmails: body.allowedEmails } : {}),
     },
   });
 

@@ -21,6 +21,7 @@ interface PersonaFilteredPortalProps {
   portalId: string;
   blocks: Block[];
   personas: string[];
+  viewerEmail: string | null;
 }
 
 function toSlug(name: string) {
@@ -39,7 +40,7 @@ function renderBlock(props: { id: string; type: string; order: number; content: 
   }
 }
 
-export function PersonaFilteredPortal({ portalId, blocks, personas }: PersonaFilteredPortalProps) {
+export function PersonaFilteredPortal({ portalId, blocks, personas, viewerEmail }: PersonaFilteredPortalProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const activePersonaSlug = searchParams.get('persona') ?? '';
@@ -98,7 +99,7 @@ export function PersonaFilteredPortal({ portalId, blocks, personas }: PersonaFil
           content: block.content,
         };
         return (
-          <TrackedBlock key={block.id} portalId={portalId} blockId={block.id} blockType={block.type}>
+          <TrackedBlock key={block.id} portalId={portalId} blockId={block.id} blockType={block.type} viewerEmail={viewerEmail}>
             {renderBlock(props)}
           </TrackedBlock>
         );

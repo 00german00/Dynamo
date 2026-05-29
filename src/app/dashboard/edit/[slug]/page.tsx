@@ -20,6 +20,8 @@ export default async function EditPortalPage({ params }: { params: Promise<{ slu
     title: portal.title,
     companyName: portal.companyName ?? '',
     personas: (portal.personas as string[] | null) ?? [],
+    accessMode: portal.accessMode,
+    allowedEmails: (portal.allowedEmails as string[] | null) ?? [],
     blocks: portal.blocks.map((b) => ({
       id: b.id,
       type: b.type,
