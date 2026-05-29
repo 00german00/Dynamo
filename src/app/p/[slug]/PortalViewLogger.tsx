@@ -1,0 +1,20 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+
+export function PortalViewLogger({ portalId, viewerEmail }: { portalId: string; viewerEmail: string | null }) {
+  const hasSent = useRef(false);
+
+  useEffect(() => {
+    if (hasSent.current) return;
+    hasSent.current = true;
+
+    fetch("/api/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ portalId, type: "page_view", viewerEmail }),
+    }).catch(() => {});
+  }, [portalId, viewerEmail]);
+
+  return null;
+}
